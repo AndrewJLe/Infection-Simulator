@@ -50,6 +50,11 @@ button {
   color: white;
 }
 
+.spawn-wall {
+  background-color: #8B4513;
+  color: white;
+}
+
 .active {
   border: white 2px solid;
 }

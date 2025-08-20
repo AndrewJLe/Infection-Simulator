@@ -1,9 +1,43 @@
 // Global variables
 let entities = [];
+let walls = [];
 let spawnMode = 'human';
 let humanSpeed = 2;
 let zombieSpeed = 1.5;
 let visionRange = 100;
+
+class Wall {
+  constructor(x1, y1, x2, y2) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+  }
+
+  draw() {
+    push()
+    stroke(0);
+    strokeWeight(8);
+    line(this.x1, this.y1, this.x2, this.y2);
+    pop()
+  }
+
+  // Check if a line from (x1,y1) to (x2,y2) intersects this wall
+  intersectsLine(x1, y1, x2, y2) {
+    return this.lineIntersection(x1, y1, x2, y2, this.x1, this.y1, this.x2, this.y2);
+  }
+
+  // Line intersection algorithm
+  lineIntersection(x1, y1, x2, y2, x3, y3, x4, y4) {
+    let denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (denom === 0) return false; // Lines are parallel
+
+    let t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    let u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  }
+}
 
 class Entity {
   constructor(x, y, type) {
@@ -34,6 +68,7 @@ class Entity {
     }
   }
 
+  // Begin of movement logic
   move() {
     let nearbyEntities = this.getEntitiesInVision();
 
@@ -43,8 +78,8 @@ class Entity {
     // Zombie movement logic
     if (this.type === 'zombie') {
       let nearestHuman = this.findNearestHuman(nearbyEntities);
-      // If a human is found, move towards them
-      if (nearestHuman) {
+      // If a human is found and can be seen (no walls blocking), move towards them
+      if (nearestHuman && this.hasLineOfSight(nearestHuman)) {
         // Calculate direction vector
         let dx = nearestHuman.x - this.x;
         let dy = nearestHuman.y - this.y;
@@ -54,7 +89,7 @@ class Entity {
         desiredVx = (dx / dist) * zombieSpeed;
         desiredVy = (dy / dist) * zombieSpeed;
       }
-      // No humans nearby, wander randomly 
+      // No humans nearby or no line of sight, wander randomly 
       else {
         // Framecount check to change direction periodically (every second at 60 FPS)
         if (frameCount % 60 === 0) {
@@ -69,9 +104,9 @@ class Entity {
     }
     // Human movement logic
     else if (this.type === 'human') {
-      // If a zombie is nearby, move away from it
+      // If a zombie is nearby and can be seen (no walls blocking), move away from it
       let nearestZombie = this.findNearestZombie(nearbyEntities);
-      if (nearestZombie) {
+      if (nearestZombie && this.hasLineOfSight(nearestZombie)) {
         // Calculate direction vector away from zombie
         let dx = this.x - nearestZombie.x;
         let dy = this.y - nearestZombie.y;
@@ -82,7 +117,7 @@ class Entity {
         desiredVx = (dx / dist) * humanSpeed * 0.9;
         desiredVy = (dy / dist) * humanSpeed * 0.9;
       }
-      // No zombies nearby, wander randomly
+      // No zombies nearby or no line of sight, wander randomly
       else {
         // Framecount check to change direction periodically (every second at 60 FPS)
         if (frameCount % 60 === 0) {
@@ -102,8 +137,25 @@ class Entity {
     let newX = this.x + this.vx + (this.spazzIntensity * random(-1, 1));
     let newY = this.y + this.vy + (this.spazzIntensity * random(-1, 1));
 
-    // newX and newY represent the proposed new position of the entity after applying velocity and spazz effect.
-    // This is done because we want to check for collisions with the boundaries or other entities before actually moving there.
+    // Check collision with walls
+    if (this.collidesWithWalls(newX, newY)) {
+      // If collision with wall, try to slide along it
+      let slideX = this.x + this.vx * 0.5;
+      let slideY = this.y + this.vy * 0.5;
+
+      if (!this.collidesWithWalls(slideX, this.y)) {
+        newX = slideX;
+        newY = this.y;
+      } else if (!this.collidesWithWalls(this.x, slideY)) {
+        newX = this.x;
+        newY = slideY;
+      } else {
+        newX = this.x;
+        newY = this.y;
+      }
+    }
+
+    // Constrain to canvas boundaries
     newX = constrain(newX, this.size, width - this.size);
     newY = constrain(newY, this.size, height - this.size);
 
@@ -130,11 +182,66 @@ class Entity {
 
       // Check for collision at alternative position
       let altCollision = this.checkCollision(altX, altY);
-      if (!altCollision) {
+      if (!altCollision && !this.collidesWithWalls(altX, altY)) {
         this.x = altX;
         this.y = altY;
       }
     }
+  }
+  // End of movement logic
+
+  // Ray casting to check line of sight
+  hasLineOfSight(target) {
+    for (let wall of walls) {
+      if (wall.intersectsLine(this.x, this.y, target.x, target.y)) {
+        return false; // Wall blocks line of sight
+      }
+    }
+    return true; // Clear line of sight
+  }
+
+  // Check if entity collides with any walls at given position
+  collidesWithWalls(x, y) {
+    for (let wall of walls) {
+      // Check if entity's circle intersects with wall line
+      if (this.circleLineIntersection(x, y, this.size, wall.x1, wall.y1, wall.x2, wall.y2)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Circle-line intersection detection
+  circleLineIntersection(cx, cy, radius, x1, y1, x2, y2) {
+    // Vector from line start to circle center
+    let dx = cx - x1;
+    let dy = cy - y1;
+
+    // Vector representing the line
+    let lineX = x2 - x1;
+    let lineY = y2 - y1;
+
+    // Length squared of the line
+    let lineLengthSq = lineX * lineX + lineY * lineY;
+
+    if (lineLengthSq === 0) {
+      // Line is actually a point
+      return sqrt(dx * dx + dy * dy) <= radius;
+    }
+
+    // Project circle center onto line
+    let t = max(0, min(1, (dx * lineX + dy * lineY) / lineLengthSq));
+
+    // Closest point on line to circle center
+    let closestX = x1 + t * lineX;
+    let closestY = y1 + t * lineY;
+
+    // Distance from circle center to closest point
+    let distX = cx - closestX;
+    let distY = cy - closestY;
+    let distSq = distX * distX + distY * distY;
+
+    return distSq <= radius * radius;
   }
 
   // Check for collision with other entities (contact between human and zombie)
@@ -234,6 +341,7 @@ class Entity {
     return nearest;
   }
 
+  // Draw every entity on the canvas
   draw() {
     push();
     translate(this.x, this.y);
@@ -272,9 +380,15 @@ function setup() {
   setupControls();
 }
 
+
 function draw() {
   // Canvas Color
   background(255);
+
+  // Draw walls first
+  for (let wall of walls) {
+    wall.draw();
+  }
 
   // Update and draw all entities
   for (let entity of entities) {
@@ -282,20 +396,25 @@ function draw() {
     entity.draw();
   }
 
+  textSize(14);
+  strokeWeight(1);
+
   // Draw (Mode, Humans, Zombies) info overlay
   fill(0, 0, 0, 15);
   rect(10, 10, 200, 80);
 
-  fill(25);
-  textSize(14);
+  fill(25); // Fill color for text
   text(`Mode: ${spawnMode.toUpperCase()}`, 20, 30);
   text(`Humans: ${entities.filter(e => e.type === 'human' && e.infectionProgress === 0).length}`, 20, 50);
   text(`Zombies: ${entities.filter(e => e.type === 'zombie' || e.infectionProgress > 0).length}`, 20, 70);
-}
 
-function mousePressed() {
-  if (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height) {
-    entities.push(new Entity(mouseX, mouseY, spawnMode));
+  // --- Wall preview highlight ---
+  if (isDrawingWall && spawnMode === 'wall') {
+    push();
+    stroke(0, 0, 255, 120); // semi-transparent blue
+    strokeWeight(8);
+    line(wallStartX, wallStartY, mouseX, mouseY);
+    pop();
   }
 }
 
@@ -306,8 +425,35 @@ function keyPressed() {
   } else if (key === 'z' || key === 'Z') {
     spawnMode = 'zombie';
     updateModeButtons();
+  } else if (key === 'w' || key === 'W') {
+    spawnMode = 'wall';
+    updateModeButtons();
   } else if (key === 'c' || key === 'C') {
     entities = [];
+    walls = [];
+  }
+}
+
+// Variables for wall drawing
+let isDrawingWall = false;
+let wallStartX, wallStartY;
+
+function mousePressed() {
+  if (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height) {
+    if (spawnMode === 'wall') {
+      isDrawingWall = true;
+      wallStartX = mouseX;
+      wallStartY = mouseY;
+    } else {
+      entities.push(new Entity(mouseX, mouseY, spawnMode));
+    }
+  }
+}
+
+function mouseReleased() {
+  if (isDrawingWall && spawnMode === 'wall') {
+    walls.push(new Wall(wallStartX, wallStartY, mouseX, mouseY));
+    isDrawingWall = false;
   }
 }
 
@@ -319,6 +465,11 @@ function setupControls() {
 
   document.getElementById('zombieBtn').onclick = () => {
     spawnMode = 'zombie';
+    updateModeButtons();
+  };
+
+  document.getElementById('wallBtn').onclick = () => {
+    spawnMode = 'wall';
     updateModeButtons();
   };
 
@@ -339,6 +490,7 @@ function setupControls() {
 
   document.getElementById('clearBtn').onclick = () => {
     entities = [];
+    walls = [];
   };
 }
 
@@ -346,9 +498,15 @@ function updateModeButtons() {
   if (spawnMode === 'human') {
     document.getElementById('humanBtn').classList.add('active');
     document.getElementById('zombieBtn').classList.remove('active');
-  } else {
+    document.getElementById('wallBtn').classList.remove('active');
+  } else if (spawnMode === 'zombie') {
     document.getElementById('zombieBtn').classList.add('active');
     document.getElementById('humanBtn').classList.remove('active');
+    document.getElementById('wallBtn').classList.remove('active');
+  } else if (spawnMode === 'wall') {
+    document.getElementById('wallBtn').classList.add('active');
+    document.getElementById('humanBtn').classList.remove('active');
+    document.getElementById('zombieBtn').classList.remove('active');
   }
 }
 
