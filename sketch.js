@@ -238,21 +238,27 @@ class Entity {
     push();
     translate(this.x, this.y);
 
+    // Draw entity based on type and infection status
     if (this.type === 'human') {
       if (this.infectionProgress > 0) {
-        let r = lerp(0, 0, this.infectionProgress);
-        let g = lerp(0, 255, this.infectionProgress);
-        let b = lerp(0, 0, this.infectionProgress);
+        // Infected human color transition from black to green
+        let r = lerp(255, 0, this.infectionProgress);
+        let g = lerp(255, 255, this.infectionProgress);
+        let b = lerp(255, 0, this.infectionProgress);
         fill(r, g, b);
       } else {
-        fill(0);
+        fill(255); // Human color
       }
     } else {
+      // Zombie color
       fill(0, 255, 0);
     }
+    // the color of humans is represented by
 
-    stroke(255);
+    // Draw entity circle
+    stroke(0); // Border color of entity
     strokeWeight(1);
+    // Draw circle representing the entity
     ellipse(0, 0, this.size * 2);
 
     pop();
@@ -267,7 +273,8 @@ function setup() {
 }
 
 function draw() {
-  background(50);
+  // Canvas Color
+  background(255);
 
   // Update and draw all entities
   for (let entity of entities) {
@@ -275,11 +282,11 @@ function draw() {
     entity.draw();
   }
 
-  // Draw info overlay
-  fill(0, 0, 0, 150);
+  // Draw (Mode, Humans, Zombies) info overlay
+  fill(0, 0, 0, 15);
   rect(10, 10, 200, 80);
 
-  fill(255);
+  fill(25);
   textSize(14);
   text(`Mode: ${spawnMode.toUpperCase()}`, 20, 30);
   text(`Humans: ${entities.filter(e => e.type === 'human' && e.infectionProgress === 0).length}`, 20, 50);

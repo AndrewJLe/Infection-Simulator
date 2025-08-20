@@ -1,8 +1,8 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #222;
-  color: white;
+  background-color: #a5a5a5;
+  color: rgb(0, 0, 0);
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
@@ -10,13 +10,15 @@ body {
 }
 
 #header {
-  background: #333;
+  background: #ffffff;
   padding: 15px;
   text-align: center;
 }
 
 #controls {
-  background: #444;
+  background: #8a8a8a;
+  border: black 2px solid;
+  color: white;
   padding: 10px;
   display: flex;
   justify-content: center;
@@ -49,7 +51,7 @@ button {
 }
 
 .active {
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  border: white 2px solid;
 }
 
 input[type="range"] {
