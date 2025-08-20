@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Sketch</title>
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script src="libraries/p5.min.js"></script>
+  <script src="libraries/p5.sound.min.js"></script>
+</head>
+
+<body>
+  <script src="sketch.js"></script>
+  <div id="header">
+    <h1>Infection Simulation</h1>
+    <p>Click to spawn entities | H = Human mode | Z = Zombie mode | C = Clear</p>
+  </div>
+
+  <div id="controls">
+    <div class="control-group">
+      <button id="humanBtn" class="spawn-human active">Human Mode</button>
+      <button id="zombieBtn" class="spawn-zombie">Zombie Mode</button>
+    </div>
+
+    <div class="control-group">
+      <label>Human Speed: <span id="humanSpeedValue">2</span></label>
+      <input type="range" id="humanSpeed" min="0.5" max="5" step="0.1" value="2">
+    </div>
+
+    <div class="control-group">
+      <label>Zombie Speed: <span id="zombieSpeedValue">2.5</span></label>
+      <input type="range" id="zombieSpeed" min="0.5" max="4" step="0.1" value="1.5">
+    </div>
+
+    <div class="control-group">
+      <label>Vision: <span id="visionValue">100</span></label>
+      <input type="range" id="visionRange" min="50" max="300" step="10" value="100">
+    </div>
+
+    <div class="control-group">
+      <button id="clearBtn" style="background-color: #f44336; color: white;">Clear All</button>
+    </div>
+  </div>
+
+  <div id="canvas-container"></div>
+</body>
+
+</html>
