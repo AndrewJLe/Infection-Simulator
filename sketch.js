@@ -5,11 +5,67 @@ let spawnMode = 'human';
 let humanSpeed = 2;
 let zombieSpeed = 1.5;
 let visionRange = 150;
-let showFOV = false; // New toggle for Field of View display
+let showFOV = false;
 // Variables for wall drawing
 let isDrawingWall = false;
 let wallStartX, wallStartY;
 let isPaused = false;
+// Building preset variables
+let selectedPreset = null;
+let previewBuilding = null;
+
+// Building preset definitions
+const buildingPresets = {
+  square: {
+    name: 'Square Building',
+    walls: [
+      { x1: -50, y1: -50, x2: -20, y2: -50 },  // Top left side
+      { x1: 20, y1: -50, x2: 50, y2: -50 },  // Top right side
+      { x1: 50, y1: -50, x2: 50, y2: 50 },   // Right
+      { x1: 50, y1: 50, x2: -50, y2: 50 },   // Bottom
+      { x1: -50, y1: 50, x2: -50, y2: -30 }, // Left bottom
+      { x1: -50, y1: -10, x2: -50, y2: -50 } // Left top (door gap)
+    ]
+  },
+  rectangle: {
+    name: 'Rectangle Building',
+    walls: [
+      { x1: -80, y1: -40, x2: 80, y2: -40 }, // Top
+      { x1: 80, y1: -40, x2: 80, y2: 40 },  // Right
+      { x1: 80, y1: 40, x2: -80, y2: 40 },  // Bottom
+      { x1: -80, y1: 40, x2: -80, y2: 20 }, // Left bottom
+      { x1: -80, y1: -20, x2: -80, y2: -40 }  // Left top (door gap)
+    ]
+  },
+  lshape: {
+    name: 'L-Shape Building',
+    walls: [
+      { x1: -60, y1: -60, x2: 20, y2: -60 },  // Top horizontal
+      { x1: 20, y1: -60, x2: 20, y2: -20 },   // Top vertical right
+      { x1: 20, y1: -20, x2: 60, y2: -20 },   // Middle horizontal
+      { x1: 60, y1: -20, x2: 60, y2: 60 },    // Right vertical
+      { x1: 60, y1: 60, x2: -60, y2: 60 },    // Bottom horizontal
+      { x1: -60, y1: 60, x2: -60, y2: 20 },   // Left bottom
+      { x1: -60, y1: -20, x2: -60, y2: -60 }    // Left top (door gap)
+    ]
+  },
+  courtyard: {
+    name: 'Courtyard Building',
+    walls: [
+      // Outer walls
+      { x1: -70, y1: -70, x2: 70, y2: -70 },   // Top
+      { x1: 70, y1: -70, x2: 70, y2: 70 },     // Right
+      { x1: 70, y1: 70, x2: -70, y2: 70 },     // Bottom
+      { x1: -70, y1: 70, x2: -70, y2: 20 },    // Left bottom
+      { x1: -70, y1: -20, x2: -70, y2: -70 },    // Left top (door gap)
+      // Inner courtyard walls
+      { x1: -30, y1: -30, x2: 30, y2: -30 },   // Inner top
+      { x1: 30, y1: -30, x2: 30, y2: 30 },     // Inner right
+      { x1: 30, y1: 30, x2: -30, y2: 30 },     // Inner bottom
+      { x1: -30, y1: 30, x2: -30, y2: -30 }    // Inner left
+    ]
+  }
+};
 
 class Wall {
   constructor(x1, y1, x2, y2) {
@@ -425,6 +481,11 @@ function draw() {
     wall.draw();
   }
 
+  // Draw preview building if hovering
+  if (selectedPreset && previewBuilding) {
+    drawPreviewBuilding();
+  }
+
   // Update and draw all entities
   for (let entity of entities) {
     if (!isPaused) {
@@ -452,25 +513,30 @@ function draw() {
   }
 }
 
-function keyPressed() {
-  if (key === 'h' || key === 'H') {
-    spawnMode = 'human';
-    updateModeButtons();
-  } else if (key === 'z' || key === 'Z') {
-    spawnMode = 'zombie';
-    updateModeButtons();
-  } else if (key === 'w' || key === 'W') {
-    spawnMode = 'wall';
-    updateModeButtons();
-  } else if (key === 'c' || key === 'C') {
-    entities = [];
-    walls = [];
+function drawPreviewBuilding() {
+  push();
+  translate(mouseX, mouseY);
+  stroke(139, 69, 19, 100);
+  strokeWeight(6);
+
+  for (let wallDef of previewBuilding) {
+    line(wallDef.x1, wallDef.y1, wallDef.x2, wallDef.y2);
+  }
+  pop();
+}
+
+function mouseMoved() {
+  if (selectedPreset) {
+    previewBuilding = buildingPresets[selectedPreset].walls;
   }
 }
 
 function mousePressed() {
   if (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height) {
-    if (spawnMode === 'wall') {
+    if (selectedPreset) {
+      // Place building preset
+      placeBuildingPreset(selectedPreset, mouseX, mouseY);
+    } else if (spawnMode === 'wall') {
       isDrawingWall = true;
       wallStartX = mouseX;
       wallStartY = mouseY;
@@ -480,28 +546,79 @@ function mousePressed() {
   }
 }
 
-function mouseReleased() {
-  if (isDrawingWall && spawnMode === 'wall') {
-    walls.push(new Wall(wallStartX, wallStartY, mouseX, mouseY));
-    isDrawingWall = false;
+function placeBuildingPreset(presetName, x, y) {
+  const preset = buildingPresets[presetName];
+  if (preset) {
+    for (let wallDef of preset.walls) {
+      walls.push(new Wall(
+        x + wallDef.x1, y + wallDef.y1,
+        x + wallDef.x2, y + wallDef.y2
+      ));
+    }
   }
+}
+
+function keyPressed() {
+  if (key === 'h' || key === 'H') {
+    spawnMode = 'human';
+    selectedPreset = null;
+    updateModeButtons();
+  } else if (key === 'z' || key === 'Z') {
+    spawnMode = 'zombie';
+    selectedPreset = null;
+    updateModeButtons();
+  } else if (key === 'w' || key === 'W') {
+    spawnMode = 'wall';
+    selectedPreset = null;
+    updateModeButtons();
+  } else if (key === 'c' || key === 'C') {
+    entities = [];
+    walls = [];
+  } else if (key === '1') {
+    selectPreset('square');
+  } else if (key === '2') {
+    selectPreset('rectangle');
+  } else if (key === '3') {
+    selectPreset('lshape');
+  } else if (key === '4') {
+    selectPreset('courtyard');
+  }
+}
+
+function selectPreset(presetName) {
+  selectedPreset = presetName;
+  spawnMode = null;
+  updateModeButtons();
+  updatePresetButtons();
 }
 
 function setupControls() {
   document.getElementById('humanBtn').onclick = () => {
     spawnMode = 'human';
+    selectedPreset = null;
     updateModeButtons();
+    updatePresetButtons();
   };
 
   document.getElementById('zombieBtn').onclick = () => {
     spawnMode = 'zombie';
+    selectedPreset = null;
     updateModeButtons();
+    updatePresetButtons();
   };
 
   document.getElementById('wallBtn').onclick = () => {
     spawnMode = 'wall';
+    selectedPreset = null;
     updateModeButtons();
+    updatePresetButtons();
   };
+
+  // Building preset buttons
+  document.getElementById('squareBtn').onclick = () => selectPreset('square');
+  document.getElementById('rectangleBtn').onclick = () => selectPreset('rectangle');
+  document.getElementById('lshapeBtn').onclick = () => selectPreset('lshape');
+  document.getElementById('courtyardBtn').onclick = () => selectPreset('courtyard');
 
   document.getElementById('humanSpeed').oninput = (e) => {
     humanSpeed = parseFloat(e.target.value);
@@ -525,7 +642,6 @@ function setupControls() {
   document.getElementById('pauseBtn').onclick = () => {
     isPaused = !isPaused;
     document.getElementById('pauseBtn').textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
-    // changes color of pause button to darker yellow
     document.getElementById('pauseBtn').style.background = isPaused ? '#ffcc00ff' : '#ffd941ff';
   };
 
@@ -546,19 +662,16 @@ function updateStats() {
 }
 
 function updateModeButtons() {
-  if (spawnMode === 'human') {
-    document.getElementById('humanBtn').classList.add('active');
-    document.getElementById('zombieBtn').classList.remove('active');
-    document.getElementById('wallBtn').classList.remove('active');
-  } else if (spawnMode === 'zombie') {
-    document.getElementById('zombieBtn').classList.add('active');
-    document.getElementById('humanBtn').classList.remove('active');
-    document.getElementById('wallBtn').classList.remove('active');
-  } else if (spawnMode === 'wall') {
-    document.getElementById('wallBtn').classList.add('active');
-    document.getElementById('humanBtn').classList.remove('active');
-    document.getElementById('zombieBtn').classList.remove('active');
-  }
+  document.getElementById('humanBtn').classList.toggle('active', spawnMode === 'human');
+  document.getElementById('zombieBtn').classList.toggle('active', spawnMode === 'zombie');
+  document.getElementById('wallBtn').classList.toggle('active', spawnMode === 'wall');
+}
+
+function updatePresetButtons() {
+  document.getElementById('squareBtn').classList.toggle('active', selectedPreset === 'square');
+  document.getElementById('rectangleBtn').classList.toggle('active', selectedPreset === 'rectangle');
+  document.getElementById('lshapeBtn').classList.toggle('active', selectedPreset === 'lshape');
+  document.getElementById('courtyardBtn').classList.toggle('active', selectedPreset === 'courtyard');
 }
 
 function windowResized() {
