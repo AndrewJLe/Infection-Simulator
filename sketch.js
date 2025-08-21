@@ -4,8 +4,12 @@ let walls = [];
 let spawnMode = 'human';
 let humanSpeed = 2;
 let zombieSpeed = 1.5;
-let visionRange = 100;
+let visionRange = 150;
 let showFOV = false; // New toggle for Field of View display
+// Variables for wall drawing
+let isDrawingWall = false;
+let wallStartX, wallStartY;
+let isPaused = false;
 
 class Wall {
   constructor(x1, y1, x2, y2) {
@@ -93,7 +97,7 @@ class Entity {
       // No humans nearby or no line of sight, wander randomly 
       else {
         // Framecount check to change direction periodically (every second at 60 FPS)
-        if (frameCount % 60 === 0) {
+        if (frameCount % 180 === 0) {
           desiredVx = random(-1, 1) * zombieSpeed * 0.3; // reduce speed for wandering
           desiredVy = random(-1, 1) * zombieSpeed * 0.3;
         }
@@ -423,7 +427,9 @@ function draw() {
 
   // Update and draw all entities
   for (let entity of entities) {
-    entity.update();
+    if (!isPaused) {
+      entity.update();
+    }
 
     // Draw FOV if toggle is enabled
     if (showFOV) {
@@ -461,10 +467,6 @@ function keyPressed() {
     walls = [];
   }
 }
-
-// Variables for wall drawing
-let isDrawingWall = false;
-let wallStartX, wallStartY;
 
 function mousePressed() {
   if (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height) {
@@ -518,6 +520,13 @@ function setupControls() {
 
   document.getElementById('showFOV').onchange = (e) => {
     showFOV = e.target.checked;
+  };
+
+  document.getElementById('pauseBtn').onclick = () => {
+    isPaused = !isPaused;
+    document.getElementById('pauseBtn').textContent = isPaused ? '▶️ Resume' : '⏸️ Pause';
+    // changes color of pause button to darker yellow
+    document.getElementById('pauseBtn').style.background = isPaused ? '#ffcc00ff' : '#ffd941ff';
   };
 
   document.getElementById('clearBtn').onclick = () => {
