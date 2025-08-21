@@ -5,9 +5,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Sketch</title>
+  <title>Infection Simulator</title>
 
   <link rel="stylesheet" type="text/css" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <script src="libraries/p5.min.js"></script>
   <script src="libraries/p5.sound.min.js"></script>
@@ -15,39 +16,96 @@
 
 <body>
   <script src="sketch.js"></script>
+
   <div id="header">
-    <h1>Infection Simulation</h1>
-    <p>Click to spawn entities | H = Human mode | Z = Zombie mode | C = Clear</p>
+    <h1>Infection Simulator</h1>
+    <p>Click to spawn entities • Use keyboard shortcuts or buttons below</p>
   </div>
 
   <div id="controls">
-    <div class="control-group">
-      <button id="humanBtn" class="spawn-human active">Human Mode</button>
-      <button id="zombieBtn" class="spawn-zombie">Zombie Mode</button>
-      <button id="wallBtn" class="spawn-wall">Wall Mode</button>
+    <div class="control-section">
+      <h3>Spawn Mode</h3>
+      <div class="button-group">
+        <button id="humanBtn" class="mode-btn human-mode active" data-key="H">
+          <span class="icon">👤</span>
+          Human
+        </button>
+        <button id="zombieBtn" class="mode-btn zombie-mode" data-key="Z">
+          <span class="icon">🧟</span>
+          Zombie
+        </button>
+        <button id="wallBtn" class="mode-btn wall-mode" data-key="W">
+          <span class="icon">🧱</span>
+          Wall
+        </button>
+      </div>
     </div>
 
-    <div class="control-group">
-      <label>Human Speed: <span id="humanSpeedValue">2</span></label>
-      <input type="range" id="humanSpeed" min="0.5" max="5" step="0.1" value="2">
+    <div class="control-section">
+      <h3>Settings</h3>
+      <div class="slider-group">
+        <div class="slider-item">
+          <label>Human Speed</label>
+          <div class="slider-container">
+            <input type="range" id="humanSpeed" min="0.5" max="5" step="0.1" value="2">
+            <span id="humanSpeedValue" class="value">2.0</span>
+          </div>
+        </div>
+
+        <div class="slider-item">
+          <label>Zombie Speed</label>
+          <div class="slider-container">
+            <input type="range" id="zombieSpeed" min="0.5" max="4" step="0.1" value="1.5">
+            <span id="zombieSpeedValue" class="value">1.5</span>
+          </div>
+        </div>
+
+        <div class="slider-item">
+          <label>Vision Range</label>
+          <div class="slider-container">
+            <input type="range" id="visionRange" min="50" max="300" step="10" value="100">
+            <span id="visionValue" class="value">100</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="control-group">
-      <label>Zombie Speed: <span id="zombieSpeedValue">2.5</span></label>
-      <input type="range" id="zombieSpeed" min="0.5" max="4" step="0.1" value="1.5">
+    <div class="control-section">
+      <h3>Display</h3>
+      <div class="toggle-group">
+        <label class="toggle-switch">
+          <input type="checkbox" id="showFOV">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">Show Field of View</span>
+        </label>
+      </div>
     </div>
 
-    <div class="control-group">
-      <label>Vision: <span id="visionValue">100</span></label>
-      <input type="range" id="visionRange" min="50" max="300" step="10" value="100">
-    </div>
-
-    <div class="control-group">
-      <button id="clearBtn" style="background-color: #f44336; color: white;">Clear All</button>
+    <div class="control-section">
+      <h3>Actions</h3>
+      <button id="clearBtn" class="action-btn clear-btn" data-key="C">
+        <span class="icon">🗑️</span>
+        Clear All
+      </button>
     </div>
   </div>
 
   <div id="canvas-container"></div>
+
+  <div id="stats">
+    <div class="stat-item">
+      <span class="stat-label">Humans:</span>
+      <span id="humanCount" class="stat-value">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Zombies:</span>
+      <span id="zombieCount" class="stat-value">0</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Total:</span>
+      <span id="totalCount" class="stat-value">0</span>
+    </div>
+  </div>
 </body>
 
 </html>

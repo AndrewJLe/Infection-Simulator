@@ -5,6 +5,7 @@ let spawnMode = 'human';
 let humanSpeed = 2;
 let zombieSpeed = 1.5;
 let visionRange = 100;
+let showFOV = false; // New toggle for Field of View display
 
 class Wall {
   constructor(x1, y1, x2, y2) {
@@ -371,10 +372,40 @@ class Entity {
 
     pop();
   }
+
+  // Draw Field of View circle
+  drawFOV() {
+    push();
+    translate(this.x, this.y);
+
+    // Set FOV circle style
+    noFill();
+    if (this.type === 'human') {
+      stroke(52, 152, 219, 100); // Blue for humans
+    } else {
+      stroke(39, 174, 96, 100); // Green for zombies
+    }
+    strokeWeight(1);
+
+    // Draw vision range circle
+    ellipse(0, 0, visionRange * 2);
+
+    pop();
+  }
 }
 
 function setup() {
-  let canvas = createCanvas(windowWidth - 20, windowHeight - 200);
+  // Calculate available height for canvas
+  const header = document.getElementById('header');
+  const controls = document.getElementById('controls');
+  const stats = document.getElementById('stats');
+  const headerHeight = header ? header.offsetHeight : 0;
+  const controlsHeight = controls ? controls.offsetHeight : 0;
+  const statsHeight = stats ? stats.offsetHeight : 0;
+  // Leave a little margin
+  const availableHeight = windowHeight - headerHeight - controlsHeight - statsHeight - 48;
+
+  let canvas = createCanvas(windowWidth - 48, max(300, availableHeight));
   canvas.parent('canvas-container');
 
   setupControls();
@@ -393,25 +424,22 @@ function draw() {
   // Update and draw all entities
   for (let entity of entities) {
     entity.update();
+
+    // Draw FOV if toggle is enabled
+    if (showFOV) {
+      entity.drawFOV();
+    }
+
     entity.draw();
   }
 
-  textSize(14);
-  strokeWeight(1);
+  // Update stats display
+  updateStats();
 
-  // Draw (Mode, Humans, Zombies) info overlay
-  fill(0, 0, 0, 15);
-  rect(10, 10, 200, 80);
-
-  fill(25); // Fill color for text
-  text(`Mode: ${spawnMode.toUpperCase()}`, 20, 30);
-  text(`Humans: ${entities.filter(e => e.type === 'human' && e.infectionProgress === 0).length}`, 20, 50);
-  text(`Zombies: ${entities.filter(e => e.type === 'zombie' || e.infectionProgress > 0).length}`, 20, 70);
-
-  // --- Wall preview highlight ---
+  // Wall preview highlight
   if (isDrawingWall && spawnMode === 'wall') {
     push();
-    stroke(0, 0, 255, 120); // semi-transparent blue
+    stroke(139, 69, 19, 150);
     strokeWeight(8);
     line(wallStartX, wallStartY, mouseX, mouseY);
     pop();
@@ -475,12 +503,12 @@ function setupControls() {
 
   document.getElementById('humanSpeed').oninput = (e) => {
     humanSpeed = parseFloat(e.target.value);
-    document.getElementById('humanSpeedValue').textContent = humanSpeed;
+    document.getElementById('humanSpeedValue').textContent = humanSpeed.toFixed(1);
   };
 
   document.getElementById('zombieSpeed').oninput = (e) => {
     zombieSpeed = parseFloat(e.target.value);
-    document.getElementById('zombieSpeedValue').textContent = zombieSpeed;
+    document.getElementById('zombieSpeedValue').textContent = zombieSpeed.toFixed(1);
   };
 
   document.getElementById('visionRange').oninput = (e) => {
@@ -488,10 +516,24 @@ function setupControls() {
     document.getElementById('visionValue').textContent = visionRange;
   };
 
+  document.getElementById('showFOV').onchange = (e) => {
+    showFOV = e.target.checked;
+  };
+
   document.getElementById('clearBtn').onclick = () => {
     entities = [];
     walls = [];
   };
+}
+
+function updateStats() {
+  const humanCount = entities.filter(e => e.type === 'human' && e.infectionProgress === 0).length;
+  const zombieCount = entities.filter(e => e.type === 'zombie' || e.infectionProgress > 0).length;
+  const totalCount = entities.length;
+
+  document.getElementById('humanCount').textContent = humanCount;
+  document.getElementById('zombieCount').textContent = zombieCount;
+  document.getElementById('totalCount').textContent = totalCount;
 }
 
 function updateModeButtons() {
@@ -511,5 +553,14 @@ function updateModeButtons() {
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth - 20, windowHeight - 200);
+  // Recalculate available height for canvas
+  const header = document.getElementById('header');
+  const controls = document.getElementById('controls');
+  const stats = document.getElementById('stats');
+  const headerHeight = header ? header.offsetHeight : 0;
+  const controlsHeight = controls ? controls.offsetHeight : 0;
+  const statsHeight = stats ? stats.offsetHeight : 0;
+  const availableHeight = windowHeight - headerHeight - controlsHeight - statsHeight - 48;
+
+  resizeCanvas(windowWidth - 48, max(300, availableHeight));
 }
