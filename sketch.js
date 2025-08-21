@@ -13,6 +13,7 @@ let isPaused = false;
 // Building preset variables
 let selectedPreset = null;
 let previewBuilding = null;
+let currentRotation = 0; // Add rotation tracking (0, 90, 180, 270 degrees)
 
 // Building preset definitions
 const buildingPresets = {
@@ -516,6 +517,7 @@ function draw() {
 function drawPreviewBuilding() {
   push();
   translate(mouseX, mouseY);
+  rotate(radians(currentRotation)); // Apply rotation
   stroke(139, 69, 19, 100);
   strokeWeight(6);
 
@@ -550,12 +552,28 @@ function placeBuildingPreset(presetName, x, y) {
   const preset = buildingPresets[presetName];
   if (preset) {
     for (let wallDef of preset.walls) {
+      // Apply rotation to wall coordinates
+      let rotatedStart = rotatePoint(wallDef.x1, wallDef.y1, currentRotation);
+      let rotatedEnd = rotatePoint(wallDef.x2, wallDef.y2, currentRotation);
+
       walls.push(new Wall(
-        x + wallDef.x1, y + wallDef.y1,
-        x + wallDef.x2, y + wallDef.y2
+        x + rotatedStart.x, y + rotatedStart.y,
+        x + rotatedEnd.x, y + rotatedEnd.y
       ));
     }
   }
+}
+
+// Helper function to rotate a point around origin
+function rotatePoint(x, y, angleDegrees) {
+  let angleRad = radians(angleDegrees);
+  let cos_a = cos(angleRad);
+  let sin_a = sin(angleRad);
+
+  return {
+    x: x * cos_a - y * sin_a,
+    y: x * sin_a + y * cos_a
+  };
 }
 
 function keyPressed() {
@@ -571,6 +589,11 @@ function keyPressed() {
     spawnMode = 'wall';
     selectedPreset = null;
     updateModeButtons();
+  } else if (key === 'r' || key === 'R') {
+    // Rotate building preset by 90 degrees
+    if (selectedPreset) {
+      currentRotation = (currentRotation + 90) % 360;
+    }
   } else if (key === 'c' || key === 'C') {
     entities = [];
     walls = [];
@@ -588,6 +611,7 @@ function keyPressed() {
 function selectPreset(presetName) {
   selectedPreset = presetName;
   spawnMode = null;
+  currentRotation = 0; // Reset rotation when selecting new preset
   updateModeButtons();
   updatePresetButtons();
 }
