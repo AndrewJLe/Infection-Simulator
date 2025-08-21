@@ -1,6 +1,7 @@
 // Global variables
 let entities = [];
 let walls = [];
+let bloodSplatters = [];
 let spawnMode = 'human';
 let humanSpeed = 2;
 let zombieSpeed = 1.5;
@@ -112,6 +113,7 @@ class Entity {
     this.infectionProgress = 0;
     this.spazzTimer = 0;
     this.spazzIntensity = 0;
+    this.justBitten = false; // Track if just bitten to prevent multiple splatters
   }
 
   update() {
@@ -329,10 +331,26 @@ class Entity {
       (this.type === 'human' && other.type === 'zombie' && this.infectionProgress === 0) ||
       (this.type === 'zombie' && other.type === 'human' && other.infectionProgress === 0)
     ) {
-      if (this.type === 'human') {
+      if (this.type === 'human' && !this.justBitten) {
         this.infectionProgress = 0.01;
-      } else {
+        this.justBitten = true;
+        // Create blood splatter at bite location
+        bloodSplatters.push(new BloodSplatter(this.x, this.y));
+
+        // Reset the flag after a short delay to prevent spam
+        setTimeout(() => {
+          this.justBitten = false;
+        }, 1000);
+      } else if (other.type === 'human' && !other.justBitten) {
         other.infectionProgress = 0.01;
+        other.justBitten = true;
+        // Create blood splatter at bite location
+        bloodSplatters.push(new BloodSplatter(other.x, other.y));
+
+        // Reset the flag after a short delay to prevent spam
+        setTimeout(() => {
+          other.justBitten = false;
+        }, 1000);
       }
     }
   }
@@ -455,6 +473,63 @@ class Entity {
   }
 }
 
+// Blood splatter class
+class BloodSplatter {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.particles = [];
+    this.life = 255; // Alpha value for fading
+    this.fadeRate = 3;
+
+    // Create 6-12 small blood particles
+    let particleCount = random(6, 12);
+    for (let i = 0; i < particleCount; i++) {
+      this.particles.push({
+        x: x + random(-5, 5),
+        y: y + random(-5, 5),
+        vx: random(-2, 2),
+        vy: random(-2, 2),
+        size: random(1, 3),
+        life: 250
+      });
+    }
+  }
+
+  update() {
+    // Fade out the splatter
+    this.life -= this.fadeRate;
+
+    // Update particles
+    for (let particle of this.particles) {
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.vx *= 0.95; // Slow down particles
+      particle.vy *= 0.95;
+      particle.life -= this.fadeRate;
+    }
+  }
+
+  draw() {
+    push();
+
+    // Draw particles
+    for (let particle of this.particles) {
+      if (particle.life > 0) {
+        fill(139, 0, 0, particle.life); // Dark red color with alpha
+        noStroke();
+        ellipse(particle.x, particle.y, particle.size);
+      }
+    }
+
+    pop();
+  }
+
+  isDead() {
+    return this.life <= 0;
+  }
+}
+
 function setup() {
   // Calculate available height for canvas
   const header = document.getElementById('header');
@@ -485,6 +560,20 @@ function draw() {
   // Draw preview building if hovering
   if (selectedPreset && previewBuilding) {
     drawPreviewBuilding();
+  }
+
+  // Update and draw blood splatters
+  for (let i = bloodSplatters.length - 1; i >= 0; i--) {
+    if (!isPaused) {
+      bloodSplatters[i].update();
+    }
+
+    bloodSplatters[i].draw();
+
+    // Remove dead splatters
+    if (bloodSplatters[i].isDead()) {
+      bloodSplatters.splice(i, 1);
+    }
   }
 
   // Update and draw all entities
@@ -672,6 +761,7 @@ function setupControls() {
   document.getElementById('clearBtn').onclick = () => {
     entities = [];
     walls = [];
+    bloodSplatters = []; // Clear blood splatters too
   };
 }
 
